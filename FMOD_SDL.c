@@ -79,7 +79,7 @@ FMOD_RESULT F_CALLBACK FMOD_SDL_INTERNAL_GetDriverInfo(
 ) {
 	SDL_strlcpy(
 		name,
-		(id == 0) ? "SDL Default" : SDL_GetAudioDeviceName(id, 0),
+		(id == 0) ? "SDL Default" : SDL_GetAudioDeviceName(id - 1, 0),
 		namelen
 	);
 
