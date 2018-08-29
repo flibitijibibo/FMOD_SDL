@@ -1,0 +1,39 @@
+This is FMOD_SDL, an SDL Audio Output Plugin for FMOD Studio.
+
+Project Website: https://github.com/flibitijibibo/FMOD_SDL/
+
+License
+-------
+FMOD_SDL is released under the zlib license. See LICENSE for details.
+
+About FMOD_SDL
+--------------
+FMOD_SDL was written to replace FMOD's poor Linux audio support. It's typically
+built as a shared library for C# games, then shoved into the FMOD init process.
+
+Building FMOD_SDL
+-----------------
+You will need the FMOD headers for your particular version, as well as the
+libfmod.so.x library. (Throw out all the symlinks in the SDK and name the actual
+sofile using that convention.)
+
+After placing those files into this folder, simply type `make`!
+
+Using FMOD_SDL
+--------------
+There is exactly one function for this entire library:
+
+void FMOD_SDL_Register(FMOD_SYSTEM *system);
+
+`system` refers to the object acquired by `Studio::System::getLowLevelSystem()`.
+
+If you wish to use this in C#, this is the DllImport declaration:
+
+[DllImport("fmod_SDL", CallingConvention = CallingConvention.Cdecl)]
+public static extern void FMOD_SDL_Register(IntPtr system);
+
+Found an issue?
+---------------
+Issues and patches can be reported via GitHub:
+
+https://github.com/flibitijibibo/FMOD_SDL/issues
