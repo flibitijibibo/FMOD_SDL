@@ -11,16 +11,16 @@ About FMOD_SDL
 FMOD_SDL was written to replace FMOD's poor Linux audio support. It's typically
 built as a shared library for C# games, then shoved into the FMOD init process.
 
-Building FMOD_SDL
------------------
+Building FMOD_SDL (Developers)
+------------------------------
 You will need the FMOD headers for your particular version, as well as the
 libfmod.so.x library. (Throw out all the symlinks in the SDK and name the actual
 sofile using that convention.)
 
 After placing those files into this folder, simply type `make`!
 
-Using FMOD_SDL
---------------
+Using FMOD_SDL (Developers)
+---------------------------
 There is exactly one function for this entire library:
 
 void FMOD_SDL_Register(FMOD_SYSTEM *system);
@@ -31,6 +31,26 @@ If you wish to use this in C#, this is the DllImport declaration:
 
 [DllImport("fmod_SDL", CallingConvention = CallingConvention.Cdecl)]
 public static extern void FMOD_SDL_Register(IntPtr system);
+
+Building FMOD_SDL (Players)
+---------------------------
+Try to figure out what version of FMOD the game uses, grab the FMOD Studio SDK,
+and throw the header files from 'lowlevel' and 'studio' into this folder.
+
+After placing those files in this folder, simply type `make preload`!
+
+Using FMOD_SDL (Players)
+------------------------
+C/C++ projects can be overloaded with LD_PRELOAD, while C# projects can be
+overloaded by changing the existing dllmap:
+
+<dllmap dll="fmodstudio.dll">
+    <dllentry os="linux" dll="libfmod_SDL.so" name="FMOD_Studio_System_Create"/>
+    <dllentry os="linux" dll="libfmodstudio.so.XX"/>
+</dllmap>
+
+Check the game folder for ".dll.config" and ".exe.config" files first! This will
+already exist somewhere, you just need to replace the existing Linux dllmap.
 
 Found an issue?
 ---------------

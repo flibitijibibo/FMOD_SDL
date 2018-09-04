@@ -27,6 +27,9 @@
 #include <SDL.h>
 #include "fmod.h"
 #include "fmod_output.h"
+#ifdef PRELOAD_MODE
+#include "fmod_studio.h"
+#endif
 
 /* Public API */
 
@@ -234,6 +237,7 @@ static FMOD_OUTPUT_DESCRIPTION FMOD_SDL_INTERNAL_Driver =
 
 /* Public API Implementation */
 
+#ifndef PRELOAD_MODE
 F_EXPORT void FMOD_SDL_Register(FMOD_SYSTEM *system)
 {
 	unsigned int handle;
@@ -241,3 +245,85 @@ F_EXPORT void FMOD_SDL_Register(FMOD_SYSTEM *system)
 	FMOD_System_RegisterOutput(system, &FMOD_SDL_INTERNAL_Driver, &handle);
 	FMOD_System_SetOutputByPlugin(system, handle);
 }
+#else
+typedef FMOD_RESULT (*studioSystemCreateFunc)(
+	FMOD_STUDIO_SYSTEM **system,
+	unsigned int headerVersion
+);
+typedef FMOD_RESULT (*studioSystemGetLowLevelFunc)(
+	FMOD_STUDIO_SYSTEM *system,
+	FMOD_SYSTEM **lowLevelSystem
+);
+typedef FMOD_RESULT (*systemRegisterOutputFunc)(
+	FMOD_SYSTEM *system,
+	FMOD_OUTPUT_DESCRIPTION *description,
+	unsigned int *handle
+);
+typedef FMOD_RESULT (*systemSetOutputByPluginFunc)(
+	FMOD_SYSTEM *system,
+	unsigned int handle
+);
+FMOD_RESULT F_API FMOD_Studio_System_Create(
+	FMOD_STUDIO_SYSTEM **system,
+	unsigned int headerVersion
+) {
+	void* fmodlib;
+	char fmodname[32];
+	unsigned int handle;
+	FMOD_SYSTEM *lowLevel = NULL;
+	studioSystemCreateFunc studioSystemCreate;
+	studioSystemGetLowLevelFunc studioSystemGetLowLevel;
+	systemRegisterOutputFunc systemRegisterOutput;
+	systemSetOutputByPluginFunc systemSetOutputByPlugin;
+
+	/* Can't mix up versions, ABI breakages urrywhur */
+	SDL_Log(
+		"headerVersion: %X FMOD_VERSION: %X\n",
+		headerVersion,
+		FMOD_VERSION
+	);
+	SDL_assert(headerVersion == FMOD_VERSION);
+
+	#define LOAD_FUNC(var, func) \
+		var = (var##Func) SDL_LoadFunction(fmodlib, func);
+
+	/* FMOD Studio entry points */
+	SDL_snprintf(
+		fmodname,
+		sizeof(fmodname),
+		"libfmodstudio.so.%X",
+		(headerVersion >> 8) & 0xFF
+	);
+	fmodlib = SDL_LoadObject(fmodname);
+	LOAD_FUNC(studioSystemCreate, "FMOD_Studio_System_Create")
+	LOAD_FUNC(studioSystemGetLowLevel, "FMOD_Studio_System_GetLowLevelSystem")
+
+	/* Overloaded function */
+	SDL_assert(studioSystemCreate(system, headerVersion) == FMOD_OK);
+	SDL_assert(studioSystemGetLowLevel(*system, &lowLevel) == FMOD_OK);
+	/* mono needs this to leak :| SDL_UnloadObject(fmodlib); */
+
+	/* FMOD entry points */
+	SDL_snprintf(
+		fmodname,
+		sizeof(fmodname),
+		"libfmod.so.%X",
+		(headerVersion >> 8) & 0xFF
+	);
+	fmodlib = SDL_LoadObject(fmodname);
+	LOAD_FUNC(systemRegisterOutput, "FMOD_System_RegisterOutput")
+	LOAD_FUNC(systemSetOutputByPlugin, "FMOD_System_SetOutputByPlugin")
+
+	/* FMOD_SDL_Register */
+	SDL_InitSubSystem(SDL_INIT_AUDIO);
+	systemRegisterOutput(lowLevel, &FMOD_SDL_INTERNAL_Driver, &handle);
+	systemSetOutputByPlugin(lowLevel, handle);
+	/* mono needs this to leak :| SDL_UnloadObject(fmodlib); */
+
+	#undef LOAD_FUNC
+
+	/* We out. */
+	SDL_Log("FMOD_SDL is registered!\n");
+	return FMOD_OK;
+}
+#endif
