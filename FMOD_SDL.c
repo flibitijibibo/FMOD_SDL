@@ -80,6 +80,8 @@ FMOD_RESULT F_CALLBACK FMOD_SDL_INTERNAL_GetDriverInfo(
 	FMOD_SPEAKERMODE *speakermode,
 	int *speakermodechannels
 ) {
+	const char *envvar;
+
 	SDL_strlcpy(
 		name,
 		(id == 0) ? "SDL Default" : SDL_GetAudioDeviceName(id - 1, 0),
@@ -89,9 +91,40 @@ FMOD_RESULT F_CALLBACK FMOD_SDL_INTERNAL_GetDriverInfo(
 	SDL_memset(guid, '\0', sizeof(FMOD_GUID));
 
 	/* TODO: SDL_GetAudioDeviceSpec */
-	*systemrate = 48000;
-	*speakermode = FMOD_SPEAKERMODE_STEREO;
-	*speakermodechannels = 2;
+	envvar = SDL_getenv("SDL_AUDIO_FREQUENCY");
+	if (!envvar || ((*systemrate = SDL_atoi(envvar)) == 0))
+	{
+		*systemrate = 48000;
+	}
+	envvar = SDL_getenv("SDL_AUDIO_CHANNELS");
+	if (!envvar || ((*speakermodechannels = SDL_atoi(envvar)) == 0))
+	{
+		*speakermodechannels = 2;
+	}
+	if (*speakermodechannels == 1)
+	{
+		*speakermode = FMOD_SPEAKERMODE_MONO;
+	}
+	else if (*speakermodechannels == 2)
+	{
+		*speakermode = FMOD_SPEAKERMODE_STEREO;
+	}
+	else if (*speakermodechannels == 4)
+	{
+		*speakermode = FMOD_SPEAKERMODE_QUAD;
+	}
+	else if (*speakermodechannels == 6)
+	{
+		*speakermode = FMOD_SPEAKERMODE_5POINT1;
+	}
+	else if (*speakermodechannels == 8)
+	{
+		*speakermode = FMOD_SPEAKERMODE_7POINT1;
+	}
+	else
+	{
+		SDL_assert(0 && "Unrecognized speaker layout!");
+	}
 
 	return FMOD_OK;
 }
