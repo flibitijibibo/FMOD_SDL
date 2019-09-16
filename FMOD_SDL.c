@@ -39,19 +39,19 @@ F_EXPORT void FMOD_SDL_Register(FMOD_SYSTEM *system);
 
 /* Driver Implementation */
 
-typedef struct FMOD_SDL_INTERNAL_Device
+typedef struct FMOD_SDL_Device
 {
 	SDL_AudioDeviceID device;
 	Uint8 frameSize;
-} FMOD_SDL_INTERNAL_Device;
+} FMOD_SDL_Device;
 
-static void FMOD_SDL_INTERNAL_MixCallback(
+static void FMOD_SDL_MixCallback(
 	void* userdata,
 	Uint8 *stream,
 	int len
 ) {
 	FMOD_OUTPUT_STATE *output_state = (FMOD_OUTPUT_STATE*) userdata;
-	FMOD_SDL_INTERNAL_Device *dev = (FMOD_SDL_INTERNAL_Device*)
+	FMOD_SDL_Device *dev = (FMOD_SDL_Device*)
 		output_state->plugindata;
 	if (output_state->readfrommixer(
 		output_state,
@@ -62,7 +62,7 @@ static void FMOD_SDL_INTERNAL_MixCallback(
 	}
 }
 
-FMOD_RESULT F_CALLBACK FMOD_SDL_INTERNAL_GetNumDrivers(
+static FMOD_RESULT F_CALLBACK FMOD_SDL_GetNumDrivers(
 	FMOD_OUTPUT_STATE *output_state,
 	int *numdrivers
 ) {
@@ -70,7 +70,7 @@ FMOD_RESULT F_CALLBACK FMOD_SDL_INTERNAL_GetNumDrivers(
 	return FMOD_OK;
 }
 
-FMOD_RESULT F_CALLBACK FMOD_SDL_INTERNAL_GetDriverInfo(
+static FMOD_RESULT F_CALLBACK FMOD_SDL_GetDriverInfo(
 	FMOD_OUTPUT_STATE *output_state,
 	int id,
 	char *name,
@@ -129,7 +129,7 @@ FMOD_RESULT F_CALLBACK FMOD_SDL_INTERNAL_GetDriverInfo(
 	return FMOD_OK;
 }
 
-FMOD_RESULT F_CALLBACK FMOD_SDL_INTERNAL_Init(
+static FMOD_RESULT F_CALLBACK FMOD_SDL_Init(
 	FMOD_OUTPUT_STATE *output_state,
 	int selecteddriver,
 	FMOD_INITFLAGS flags,
@@ -141,7 +141,7 @@ FMOD_RESULT F_CALLBACK FMOD_SDL_INTERNAL_Init(
 	int dspnumbuffers,
 	void *extradriverdata
 ) {
-	FMOD_SDL_INTERNAL_Device *device;
+	FMOD_SDL_Device *device;
 	SDL_AudioSpec want, have;
 
 	if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
@@ -165,13 +165,13 @@ FMOD_RESULT F_CALLBACK FMOD_SDL_INTERNAL_Init(
 		SDL_assert(0 && "Unsupported FMOD PCM format!");
 	}
 	want.silence = 0;
-	want.callback = FMOD_SDL_INTERNAL_MixCallback;
+	want.callback = FMOD_SDL_MixCallback;
 	want.samples = dspbufferlength;
 	want.userdata = output_state;
 
 	/* Create the device, finally. */
-	device = (FMOD_SDL_INTERNAL_Device*) SDL_malloc(
-		sizeof(FMOD_SDL_INTERNAL_Device)
+	device = (FMOD_SDL_Device*) SDL_malloc(
+		sizeof(FMOD_SDL_Device)
 	);
 	device->device = SDL_OpenAudioDevice(
 		(selecteddriver == 0) ?
@@ -240,25 +240,25 @@ FMOD_RESULT F_CALLBACK FMOD_SDL_INTERNAL_Init(
 	return FMOD_OK;
 }
 
-FMOD_RESULT F_CALLBACK FMOD_SDL_INTERNAL_Start(FMOD_OUTPUT_STATE *output_state)
+static FMOD_RESULT F_CALLBACK FMOD_SDL_Start(FMOD_OUTPUT_STATE *output_state)
 {
-	FMOD_SDL_INTERNAL_Device *dev = (FMOD_SDL_INTERNAL_Device*)
+	FMOD_SDL_Device *dev = (FMOD_SDL_Device*)
 		output_state->plugindata;
 	SDL_PauseAudioDevice(dev->device, 0);
 	return FMOD_OK;
 }
 
-FMOD_RESULT F_CALLBACK FMOD_SDL_INTERNAL_Stop(FMOD_OUTPUT_STATE *output_state)
+static FMOD_RESULT F_CALLBACK FMOD_SDL_Stop(FMOD_OUTPUT_STATE *output_state)
 {
-	FMOD_SDL_INTERNAL_Device *dev = (FMOD_SDL_INTERNAL_Device*)
+	FMOD_SDL_Device *dev = (FMOD_SDL_Device*)
 		output_state->plugindata;
 	SDL_PauseAudioDevice(dev->device, 1);
 	return FMOD_OK;
 }
 
-FMOD_RESULT F_CALLBACK FMOD_SDL_INTERNAL_Close(FMOD_OUTPUT_STATE *output_state)
+static FMOD_RESULT F_CALLBACK FMOD_SDL_Close(FMOD_OUTPUT_STATE *output_state)
 {
-	FMOD_SDL_INTERNAL_Device *dev = (FMOD_SDL_INTERNAL_Device*)
+	FMOD_SDL_Device *dev = (FMOD_SDL_Device*)
 		output_state->plugindata;
 	SDL_CloseAudioDevice(dev->device);
 	SDL_free(dev);
@@ -266,18 +266,18 @@ FMOD_RESULT F_CALLBACK FMOD_SDL_INTERNAL_Close(FMOD_OUTPUT_STATE *output_state)
 	return FMOD_OK;
 }
 
-static FMOD_OUTPUT_DESCRIPTION FMOD_SDL_INTERNAL_Driver =
+static FMOD_OUTPUT_DESCRIPTION FMOD_SDL_Driver =
 {
 	FMOD_OUTPUT_PLUGIN_VERSION,
 	"FMOD_SDL",
 	FMOD_SDL_VERSION,
 	0, /* We have our own thread! */
-	FMOD_SDL_INTERNAL_GetNumDrivers,
-	FMOD_SDL_INTERNAL_GetDriverInfo,
-	FMOD_SDL_INTERNAL_Init,
-	FMOD_SDL_INTERNAL_Start,
-	FMOD_SDL_INTERNAL_Stop,
-	FMOD_SDL_INTERNAL_Close,
+	FMOD_SDL_GetNumDrivers,
+	FMOD_SDL_GetDriverInfo,
+	FMOD_SDL_Init,
+	FMOD_SDL_Start,
+	FMOD_SDL_Stop,
+	FMOD_SDL_Close,
 	NULL, /* Does anyone really want the native handle? */
 	NULL, /* We have our own thread! */
 	NULL, /* We have our own thread! */
@@ -295,7 +295,7 @@ static FMOD_OUTPUT_DESCRIPTION FMOD_SDL_INTERNAL_Driver =
 F_EXPORT void FMOD_SDL_Register(FMOD_SYSTEM *system)
 {
 	unsigned int handle;
-	FMOD_System_RegisterOutput(system, &FMOD_SDL_INTERNAL_Driver, &handle);
+	FMOD_System_RegisterOutput(system, &FMOD_SDL_Driver, &handle);
 	FMOD_System_SetOutputByPlugin(system, handle);
 }
 #else
@@ -371,7 +371,7 @@ FMOD_RESULT F_API FMOD_Studio_System_Create(
 	LOAD_FUNC(systemSetOutputByPlugin, "FMOD_System_SetOutputByPlugin")
 
 	/* FMOD_SDL_Register */
-	systemRegisterOutput(lowLevel, &FMOD_SDL_INTERNAL_Driver, &handle);
+	systemRegisterOutput(lowLevel, &FMOD_SDL_Driver, &handle);
 	systemSetOutputByPlugin(lowLevel, handle);
 	/* mono needs this to leak :| SDL_UnloadObject(fmodlib); */
 
