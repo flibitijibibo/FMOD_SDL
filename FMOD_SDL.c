@@ -230,9 +230,24 @@ FMOD_RESULT F_CALLBACK FMOD_SDL_INTERNAL_Init(
 	}
 	device->frameSize *= have.channels;
 
-	/* We're running now! */
+	/* We're ready to go! */
 	output_state->plugindata = device;
-	SDL_PauseAudioDevice(device->device, 0);
+	return FMOD_OK;
+}
+
+FMOD_RESULT F_CALLBACK FMOD_SDL_INTERNAL_Start(FMOD_OUTPUT_STATE *output_state)
+{
+	FMOD_SDL_INTERNAL_Device *dev = (FMOD_SDL_INTERNAL_Device*)
+		output_state->plugindata;
+	SDL_PauseAudioDevice(dev->device, 0);
+	return FMOD_OK;
+}
+
+FMOD_RESULT F_CALLBACK FMOD_SDL_INTERNAL_Stop(FMOD_OUTPUT_STATE *output_state)
+{
+	FMOD_SDL_INTERNAL_Device *dev = (FMOD_SDL_INTERNAL_Device*)
+		output_state->plugindata;
+	SDL_PauseAudioDevice(dev->device, 1);
 	return FMOD_OK;
 }
 
@@ -254,8 +269,8 @@ static FMOD_OUTPUT_DESCRIPTION FMOD_SDL_INTERNAL_Driver =
 	FMOD_SDL_INTERNAL_GetNumDrivers,
 	FMOD_SDL_INTERNAL_GetDriverInfo,
 	FMOD_SDL_INTERNAL_Init,
-	NULL, /* Nothing to do before mix updates... */
-	NULL, /* Nothing to do after mix updates... */
+	FMOD_SDL_INTERNAL_Start,
+	FMOD_SDL_INTERNAL_Stop,
 	FMOD_SDL_INTERNAL_Close,
 	NULL, /* Does anyone really want the native handle? */
 	NULL, /* We have our own thread! */
