@@ -362,9 +362,15 @@ FMOD_RESULT F_API FMOD_Studio_System_Create(
 
 	/* Overloaded function */
 	result = studioSystemCreate(system, headerVersion);
-	SDL_assert(result == FMOD_OK);
+	if (result != FMOD_OK)
+	{
+		return result;
+	}
 	result = studioSystemGetLowLevel(*system, &lowLevel);
-	SDL_assert(result == FMOD_OK);
+	if (result != FMOD_OK)
+	{
+		return result;
+	}
 	/* mono needs this to leak :| SDL_UnloadObject(fmodlib); */
 
 	/* FMOD entry points */
