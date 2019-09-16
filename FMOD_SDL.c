@@ -144,6 +144,11 @@ FMOD_RESULT F_CALLBACK FMOD_SDL_INTERNAL_Init(
 	FMOD_SDL_INTERNAL_Device *device;
 	SDL_AudioSpec want, have;
 
+	if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
+	{
+		return FMOD_ERR_OUTPUT_INIT;
+	}
+
 	/* What do we want? */
 	want.freq = *outputrate;
 	want.channels = *speakermodechannels;
@@ -257,6 +262,7 @@ FMOD_RESULT F_CALLBACK FMOD_SDL_INTERNAL_Close(FMOD_OUTPUT_STATE *output_state)
 		output_state->plugindata;
 	SDL_CloseAudioDevice(dev->device);
 	SDL_free(dev);
+	SDL_QuitSubSystem(SDL_INIT_AUDIO);
 	return FMOD_OK;
 }
 
@@ -289,7 +295,6 @@ static FMOD_OUTPUT_DESCRIPTION FMOD_SDL_INTERNAL_Driver =
 F_EXPORT void FMOD_SDL_Register(FMOD_SYSTEM *system)
 {
 	unsigned int handle;
-	SDL_InitSubSystem(SDL_INIT_AUDIO);
 	FMOD_System_RegisterOutput(system, &FMOD_SDL_INTERNAL_Driver, &handle);
 	FMOD_System_SetOutputByPlugin(system, handle);
 }
@@ -366,7 +371,6 @@ FMOD_RESULT F_API FMOD_Studio_System_Create(
 	LOAD_FUNC(systemSetOutputByPlugin, "FMOD_System_SetOutputByPlugin")
 
 	/* FMOD_SDL_Register */
-	SDL_InitSubSystem(SDL_INIT_AUDIO);
 	systemRegisterOutput(lowLevel, &FMOD_SDL_INTERNAL_Driver, &handle);
 	systemSetOutputByPlugin(lowLevel, handle);
 	/* mono needs this to leak :| SDL_UnloadObject(fmodlib); */
