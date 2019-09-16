@@ -123,7 +123,8 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_GetDriverInfo(
 	}
 	else
 	{
-		SDL_assert(0 && "Unrecognized speaker layout!");
+		SDL_Log("Unrecognized speaker layout!");
+		return FMOD_ERR_OUTPUT_FORMAT;
 	}
 
 	return FMOD_OK;
@@ -146,6 +147,7 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_Init(
 
 	if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
 	{
+		SDL_Log("SDL_INIT_AUDIO failed: %s", SDL_GetError());
 		return FMOD_ERR_OUTPUT_INIT;
 	}
 
@@ -162,7 +164,8 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_Init(
 	}
 	else
 	{
-		SDL_assert(0 && "Unsupported FMOD PCM format!");
+		SDL_Log("Unsupported FMOD PCM format!");
+		return FMOD_ERR_OUTPUT_INIT;
 	}
 	want.silence = 0;
 	want.callback = FMOD_SDL_MixCallback;
@@ -189,6 +192,7 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_Init(
 	if (device->device < 0)
 	{
 		SDL_free(device);
+		SDL_Log("OpenAudioDevice failed: %s", SDL_GetError());
 		return FMOD_ERR_OUTPUT_INIT;
 	}
 
@@ -217,7 +221,9 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_Init(
 	}
 	else
 	{
-		SDL_assert(0 && "Unrecognized speaker layout!");
+		SDL_free(device);
+		SDL_Log("Unrecognized speaker layout!");
+		return FMOD_ERR_OUTPUT_INIT;
 	}
 	if (have.format == AUDIO_F32)
 	{
@@ -231,7 +237,9 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_Init(
 	}
 	else
 	{
-		SDL_assert(0 && "Unexpected SDL audio format!");
+		SDL_free(device);
+		SDL_Log("Unexpected SDL audio format!");
+		return FMOD_ERR_OUTPUT_INIT;
 	}
 	device->frameSize *= have.channels;
 
