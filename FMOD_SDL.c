@@ -145,8 +145,10 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_Init(
 	{
 	#define FORMAT(fmod, sdl) \
 		case FMOD_SOUND_FORMAT_##fmod: want.format = AUDIO_##sdl; break;
-	FORMAT(PCMFLOAT, F32)
+	FORMAT(PCM8, S8)
 	FORMAT(PCM16, S16SYS)
+	FORMAT(PCM32, S32SYS)
+	FORMAT(PCMFLOAT, F32SYS)
 	#undef FORMAT
 	default:
 		SDL_Log("Unsupported FMOD PCM format!");
@@ -209,8 +211,10 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_Init(
 			*outputformat = FMOD_SOUND_FORMAT_##fmod; \
 			device->frameSize = size; \
 			break;
-	FORMAT(F32, PCMFLOAT, 4)
+	FORMAT(S8, PCM8, 1)
 	FORMAT(S16SYS, PCM16, 2)
+	FORMAT(S32SYS, PCM32, 4)
+	FORMAT(F32SYS, PCMFLOAT, 4)
 	#undef FORMAT
 	default:
 		SDL_CloseAudioDevice(device->device);
