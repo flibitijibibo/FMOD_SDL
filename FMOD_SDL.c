@@ -340,7 +340,7 @@ FMOD_RESULT F_API FMOD_Studio_System_Create(
 
 	/* Can't mix up versions, ABI breakages urrywhur */
 	SDL_Log(
-		"headerVersion: %X FMOD_VERSION: %X\n",
+		"headerVersion: %X FMOD_VERSION: %X",
 		headerVersion,
 		FMOD_VERSION
 	);
@@ -386,7 +386,7 @@ FMOD_RESULT F_API FMOD_Studio_System_Create(
 	#undef LOAD_FUNC
 
 	/* We out. */
-	SDL_Log("FMOD_SDL is registered!\n");
+	SDL_Log("FMOD_SDL is registered!");
 	return FMOD_OK;
 }
 #endif
