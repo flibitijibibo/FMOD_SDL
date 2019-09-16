@@ -66,7 +66,11 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_GetNumDrivers(
 	FMOD_OUTPUT_STATE *output_state,
 	int *numdrivers
 ) {
-	*numdrivers = SDL_GetNumAudioDevices(0) + 1;
+	*numdrivers = SDL_GetNumAudioDevices(0);
+	if (*numdrivers > 0)
+	{
+		*numdrivers += 1;
+	}
 	return FMOD_OK;
 }
 
