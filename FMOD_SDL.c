@@ -221,6 +221,7 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_Init(
 	}
 	else
 	{
+		SDL_CloseAudioDevice(device->device);
 		SDL_free(device);
 		SDL_Log("Unrecognized speaker layout!");
 		return FMOD_ERR_OUTPUT_INIT;
@@ -237,6 +238,7 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_Init(
 	}
 	else
 	{
+		SDL_CloseAudioDevice(device->device);
 		SDL_free(device);
 		SDL_Log("Unexpected SDL audio format!");
 		return FMOD_ERR_OUTPUT_INIT;
