@@ -102,28 +102,18 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_GetDriverInfo(
 	{
 		*speakermodechannels = 2;
 	}
-	if (*speakermodechannels == 1)
+
+	switch (*speakermodechannels)
 	{
-		*speakermode = FMOD_SPEAKERMODE_MONO;
-	}
-	else if (*speakermodechannels == 2)
-	{
-		*speakermode = FMOD_SPEAKERMODE_STEREO;
-	}
-	else if (*speakermodechannels == 4)
-	{
-		*speakermode = FMOD_SPEAKERMODE_QUAD;
-	}
-	else if (*speakermodechannels == 6)
-	{
-		*speakermode = FMOD_SPEAKERMODE_5POINT1;
-	}
-	else if (*speakermodechannels == 8)
-	{
-		*speakermode = FMOD_SPEAKERMODE_7POINT1;
-	}
-	else
-	{
+	#define SPEAKERS(count, type) \
+		case count: *speakermode = FMOD_SPEAKERMODE_##type; break;
+	SPEAKERS(1, MONO)
+	SPEAKERS(2, STEREO)
+	SPEAKERS(4, QUAD)
+	SPEAKERS(6, 5POINT1)
+	SPEAKERS(8, 7POINT1)
+	#undef SPEAKERS
+	default:
 		SDL_Log("Unrecognized speaker layout!");
 		return FMOD_ERR_OUTPUT_FORMAT;
 	}
@@ -149,18 +139,16 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_Init(
 	/* What do we want? */
 	want.freq = *outputrate;
 	want.channels = *speakermodechannels;
-	if (*outputformat == FMOD_SOUND_FORMAT_PCMFLOAT)
+	switch (*outputformat)
 	{
-		want.format = AUDIO_F32;
-	}
-	else if (*outputformat == FMOD_SOUND_FORMAT_PCM16)
-	{
-		want.format = AUDIO_S16SYS;
-	}
-	else
-	{
+	#define FORMAT(fmod, sdl) \
+		case FMOD_SOUND_FORMAT_##fmod: want.format = AUDIO_##sdl; break;
+	FORMAT(PCMFLOAT, F32)
+	FORMAT(PCM16, S16SYS)
+	#undef FORMAT
+	default:
 		SDL_Log("Unsupported FMOD PCM format!");
-		return FMOD_ERR_OUTPUT_INIT;
+		return FMOD_ERR_OUTPUT_FORMAT;
 	}
 	want.silence = 0;
 	want.callback = FMOD_SDL_MixCallback;
@@ -194,45 +182,33 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_Init(
 	/* What did we get? */
 	*outputrate = have.freq;
 	*speakermodechannels = have.channels;
-	if (have.channels == 1)
+	switch (have.channels)
 	{
-		*speakermode = FMOD_SPEAKERMODE_MONO;
-	}
-	else if (have.channels == 2)
-	{
-		*speakermode = FMOD_SPEAKERMODE_STEREO;
-	}
-	else if (have.channels == 4)
-	{
-		*speakermode = FMOD_SPEAKERMODE_QUAD;
-	}
-	else if (have.channels == 6)
-	{
-		*speakermode = FMOD_SPEAKERMODE_5POINT1;
-	}
-	else if (have.channels == 8)
-	{
-		*speakermode = FMOD_SPEAKERMODE_7POINT1;
-	}
-	else
-	{
+	#define SPEAKERS(count, type) \
+		case count: *speakermode = FMOD_SPEAKERMODE_##type; break;
+	SPEAKERS(1, MONO)
+	SPEAKERS(2, STEREO)
+	SPEAKERS(4, QUAD)
+	SPEAKERS(6, 5POINT1)
+	SPEAKERS(8, 7POINT1)
+	#undef SPEAKERS
+	default:
 		SDL_CloseAudioDevice(device->device);
 		SDL_free(device);
 		SDL_Log("Unrecognized speaker layout!");
 		return FMOD_ERR_OUTPUT_INIT;
 	}
-	if (have.format == AUDIO_F32)
+	switch (have.format)
 	{
-		*outputformat = FMOD_SOUND_FORMAT_PCMFLOAT;
-		device->frameSize = 4;
-	}
-	else if (have.format == AUDIO_S16SYS)
-	{
-		*outputformat = FMOD_SOUND_FORMAT_PCM16;
-		device->frameSize = 2;
-	}
-	else
-	{
+	#define FORMAT(sdl, fmod, size) \
+		case AUDIO_##sdl: \
+			*outputformat = FMOD_SOUND_FORMAT_##fmod; \
+			device->frameSize = size; \
+			break;
+	FORMAT(F32, PCMFLOAT, 4)
+	FORMAT(S16SYS, PCM16, 2)
+	#undef FORMAT
+	default:
 		SDL_CloseAudioDevice(device->device);
 		SDL_free(device);
 		SDL_Log("Unexpected SDL audio format!");
