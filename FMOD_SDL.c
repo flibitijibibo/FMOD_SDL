@@ -45,11 +45,8 @@ typedef struct FMOD_SDL_Device
 	Uint8 frameSize;
 } FMOD_SDL_Device;
 
-static void FMOD_SDL_MixCallback(
-	void* userdata,
-	Uint8 *stream,
-	int len
-) {
+static void FMOD_SDL_MixCallback(void* userdata, Uint8 *stream,	int len)
+{
 	FMOD_OUTPUT_STATE *output_state = (FMOD_OUTPUT_STATE*) userdata;
 	FMOD_SDL_Device *dev = (FMOD_SDL_Device*)
 		output_state->plugindata;
