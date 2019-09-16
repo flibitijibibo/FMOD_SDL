@@ -317,6 +317,7 @@ FMOD_RESULT F_API FMOD_Studio_System_Create(
 ) {
 	void* fmodlib;
 	char fmodname[32];
+	FMOD_RESULT result;
 	unsigned int handle;
 	FMOD_SYSTEM *lowLevel = NULL;
 	studioSystemCreateFunc studioSystemCreate;
@@ -347,8 +348,10 @@ FMOD_RESULT F_API FMOD_Studio_System_Create(
 	LOAD_FUNC(studioSystemGetLowLevel, "FMOD_Studio_System_GetLowLevelSystem")
 
 	/* Overloaded function */
-	SDL_assert(studioSystemCreate(system, headerVersion) == FMOD_OK);
-	SDL_assert(studioSystemGetLowLevel(*system, &lowLevel) == FMOD_OK);
+	result = studioSystemCreate(system, headerVersion);
+	SDL_assert(result == FMOD_OK);
+	result = studioSystemGetLowLevel(*system, &lowLevel);
+	SDL_assert(result == FMOD_OK);
 	/* mono needs this to leak :| SDL_UnloadObject(fmodlib); */
 
 	/* FMOD entry points */
