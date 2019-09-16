@@ -146,12 +146,6 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_Init(
 	FMOD_SDL_Device *device;
 	SDL_AudioSpec want, have;
 
-	if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
-	{
-		SDL_Log("SDL_INIT_AUDIO failed: %s", SDL_GetError());
-		return FMOD_ERR_OUTPUT_INIT;
-	}
-
 	/* What do we want? */
 	want.freq = *outputrate;
 	want.channels = *speakermodechannels;
@@ -273,7 +267,6 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_Close(FMOD_OUTPUT_STATE *output_state)
 		output_state->plugindata;
 	SDL_CloseAudioDevice(dev->device);
 	SDL_free(dev);
-	SDL_QuitSubSystem(SDL_INIT_AUDIO);
 	return FMOD_OK;
 }
 
@@ -306,6 +299,11 @@ static FMOD_OUTPUT_DESCRIPTION FMOD_SDL_Driver =
 F_EXPORT void FMOD_SDL_Register(FMOD_SYSTEM *system)
 {
 	unsigned int handle;
+	if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
+	{
+		SDL_Log("SDL_INIT_AUDIO failed: %s", SDL_GetError());
+		return;
+	}
 	FMOD_System_RegisterOutput(system, &FMOD_SDL_Driver, &handle);
 	FMOD_System_SetOutputByPlugin(system, handle);
 }
@@ -388,6 +386,11 @@ FMOD_RESULT F_API FMOD_Studio_System_Create(
 	LOAD_FUNC(systemSetOutputByPlugin, "FMOD_System_SetOutputByPlugin")
 
 	/* FMOD_SDL_Register */
+	if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
+	{
+		SDL_Log("SDL_INIT_AUDIO failed: %s", SDL_GetError());
+		return FMOD_OK;
+	}
 	systemRegisterOutput(lowLevel, &FMOD_SDL_Driver, &handle);
 	systemSetOutputByPlugin(lowLevel, handle);
 	/* mono needs this to leak :| SDL_UnloadObject(fmodlib); */
