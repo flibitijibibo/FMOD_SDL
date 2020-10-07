@@ -339,8 +339,7 @@ FMOD_RESULT F_API FMOD_Studio_System_Create(
 	SDL_snprintf(
 		fmodname,
 		sizeof(fmodname),
-		"libfmodstudio.so.%X",
-		(headerVersion >> 8) & 0xFF
+		"libfmodstudio.so.11" /* FIXME: FMOD screwed up their sonames! */
 	);
 	fmodlib = SDL_LoadObject(fmodname);
 	LOAD_FUNC(studioSystemCreate, "FMOD_Studio_System_Create")
