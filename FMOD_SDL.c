@@ -33,7 +33,7 @@
 
 /* Public API */
 
-#define FMOD_SDL_VERSION 190916
+#define FMOD_SDL_VERSION 201007
 
 F_EXPORT void FMOD_SDL_Register(FMOD_SYSTEM *system);
 
@@ -259,7 +259,7 @@ static FMOD_OUTPUT_DESCRIPTION FMOD_SDL_Driver =
 	FMOD_OUTPUT_PLUGIN_VERSION,
 	"FMOD_SDL",
 	FMOD_SDL_VERSION,
-	0, /* We have our own thread! */
+	FMOD_OUTPUT_METHOD_MIX_DIRECT, /* We have our own thread! */
 	FMOD_SDL_GetNumDrivers,
 	FMOD_SDL_GetDriverInfo,
 	FMOD_SDL_Init,
@@ -274,7 +274,8 @@ static FMOD_OUTPUT_DESCRIPTION FMOD_SDL_Driver =
 	NULL, /* 3D object hardware...? */
 	NULL, /* 3D object hardware...? */
 	NULL, /* Auxiliary ports...? */
-	NULL /* Auxiliary ports...? */
+	NULL, /* Auxiliary ports...? */
+	NULL /* FIXME: AUDIODEVICE events? */
 };
 
 /* Public API Implementation */
