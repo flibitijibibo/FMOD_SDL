@@ -297,9 +297,9 @@ typedef FMOD_RESULT (*studioSystemCreateFunc)(
 	FMOD_STUDIO_SYSTEM **system,
 	unsigned int headerVersion
 );
-typedef FMOD_RESULT (*studioSystemGetLowLevelFunc)(
+typedef FMOD_RESULT (*studioSystemGetCoreFunc)(
 	FMOD_STUDIO_SYSTEM *system,
-	FMOD_SYSTEM **lowLevelSystem
+	FMOD_SYSTEM **coreSystem
 );
 typedef FMOD_RESULT (*systemRegisterOutputFunc)(
 	FMOD_SYSTEM *system,
@@ -318,9 +318,9 @@ FMOD_RESULT F_API FMOD_Studio_System_Create(
 	char fmodname[32];
 	FMOD_RESULT result;
 	unsigned int handle;
-	FMOD_SYSTEM *lowLevel = NULL;
+	FMOD_SYSTEM *core = NULL;
 	studioSystemCreateFunc studioSystemCreate;
-	studioSystemGetLowLevelFunc studioSystemGetLowLevel;
+	studioSystemGetCoreFunc studioSystemGetCore;
 	systemRegisterOutputFunc systemRegisterOutput;
 	systemSetOutputByPluginFunc systemSetOutputByPlugin;
 
@@ -343,7 +343,7 @@ FMOD_RESULT F_API FMOD_Studio_System_Create(
 	);
 	fmodlib = SDL_LoadObject(fmodname);
 	LOAD_FUNC(studioSystemCreate, "FMOD_Studio_System_Create")
-	LOAD_FUNC(studioSystemGetLowLevel, "FMOD_Studio_System_GetLowLevelSystem")
+	LOAD_FUNC(studioSystemGetCore, "FMOD_Studio_System_GetCoreSystem")
 
 	/* Overloaded function */
 	result = studioSystemCreate(system, headerVersion);
@@ -351,7 +351,7 @@ FMOD_RESULT F_API FMOD_Studio_System_Create(
 	{
 		return result;
 	}
-	result = studioSystemGetLowLevel(*system, &lowLevel);
+	result = studioSystemGetCore(*system, &core);
 	if (result != FMOD_OK)
 	{
 		return result;
@@ -375,8 +375,8 @@ FMOD_RESULT F_API FMOD_Studio_System_Create(
 		SDL_Log("SDL_INIT_AUDIO failed: %s", SDL_GetError());
 		return FMOD_OK;
 	}
-	systemRegisterOutput(lowLevel, &FMOD_SDL_Driver, &handle);
-	systemSetOutputByPlugin(lowLevel, handle);
+	systemRegisterOutput(core, &FMOD_SDL_Driver, &handle);
+	systemSetOutputByPlugin(core, handle);
 	/* mono needs this to leak :| SDL_UnloadObject(fmodlib); */
 
 	#undef LOAD_FUNC
