@@ -1,6 +1,6 @@
 /* FMOD_SDL: SDL Audio Output Plugin for FMOD Studio
  *
- * Copyright (c) 2018-2019 Ethan Lee
+ * Copyright (c) 2018-2021 Ethan Lee
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
