@@ -360,7 +360,11 @@ static FMOD_OUTPUT_DESCRIPTION FMOD_SDL_Driver =
 	FMOD_OUTPUT_PLUGIN_VERSION,
 	"FMOD_SDL",
 	FMOD_SDL_VERSION,
+#if FMOD_VERSION >= 0x00020000
 	FMOD_OUTPUT_METHOD_MIX_DIRECT, /* We have our own thread! */
+#else
+	0,
+#endif
 	FMOD_SDL_GetNumDrivers,
 	FMOD_SDL_GetDriverInfo,
 	FMOD_SDL_Init,
@@ -375,8 +379,10 @@ static FMOD_OUTPUT_DESCRIPTION FMOD_SDL_Driver =
 	NULL, /* 3D object hardware...? */
 	NULL, /* 3D object hardware...? */
 	NULL, /* Auxiliary ports...? */
-	NULL, /* Auxiliary ports...? */
-	NULL /* FIXME: AUDIODEVICE events? */
+	NULL /* Auxiliary ports...? */
+#if FMOD_VERSION >= 0x00020000
+	, NULL /* FIXME: AUDIODEVICE events? */
+#endif
 };
 
 /* Public API Implementation */
@@ -440,11 +446,20 @@ FMOD_RESULT F_API FMOD_Studio_System_Create(
 	SDL_snprintf(
 		fmodname,
 		sizeof(fmodname),
+#if FMOD_VERSION >= 0x00020000
 		"libfmodstudio.so.11" /* FIXME: FMOD screwed up their sonames! */
+#else
+		"libfmodstudio.so.%X", (headerVersion >> 8) & 0xFF
+#endif
 	);
 	fmodlib = SDL_LoadObject(fmodname);
 	LOAD_FUNC(studioSystemCreate, "FMOD_Studio_System_Create")
+#if FMOD_VERSION >= 0x00020000
 	LOAD_FUNC(studioSystemGetCore, "FMOD_Studio_System_GetCoreSystem")
+#else
+	/* Technically not the right name anymore, but whatever... */
+	LOAD_FUNC(studioSystemGetCore, "FMOD_Studio_System_GetLowLevelSystem")
+#endif
 
 	/* Overloaded function */
 	result = studioSystemCreate(system, headerVersion);
