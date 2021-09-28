@@ -168,7 +168,8 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_GetDriverInfo(
 			for (i = 0; i < devcount; i += 1)
 			{
 				SDL_GetAudioDeviceSpec(i, 0, &spec);
-				if (spec.channels > *speakermodechannels)
+				if (	(spec.channels > *speakermodechannels) &&
+					(spec.channels <= 8)	)
 				{
 					*speakermodechannels = spec.channels;
 					if (setRate)
