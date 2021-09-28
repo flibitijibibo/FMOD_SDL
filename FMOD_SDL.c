@@ -33,7 +33,7 @@
 
 /* Public API */
 
-#define FMOD_SDL_VERSION 210305
+#define FMOD_SDL_VERSION 210928
 
 F_EXPORT void FMOD_SDL_Register(FMOD_SYSTEM *system);
 
