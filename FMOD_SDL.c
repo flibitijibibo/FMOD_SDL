@@ -114,7 +114,6 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_GetDriverInfo(
 		*speakermodechannels = 0;
 	}
 
-#if SDL_VERSION_ATLEAST(2, 0, 15)
 	if (id == 0)
 	{
 		/* Okay, so go grab something from the liquor cabinet and get
@@ -193,7 +192,6 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_GetDriverInfo(
 			*speakermodechannels = spec.channels;
 		}
 	}
-#endif /* SDL >= 2.0.15 */
 
 	/* If we make it all the way here with no format, hardcode a sane one */
 	if (*systemrate <= 0)
