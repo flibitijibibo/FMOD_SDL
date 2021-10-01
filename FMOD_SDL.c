@@ -35,7 +35,15 @@
 
 #define FMOD_SDL_VERSION 210928
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 F_EXPORT void FMOD_SDL_Register(FMOD_SYSTEM *system);
+
+#ifdef __cplusplus
+}
+#endif
 
 /* Driver Implementation */
 
