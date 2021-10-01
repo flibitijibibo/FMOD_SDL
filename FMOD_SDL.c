@@ -33,7 +33,7 @@
 
 /* Public API */
 
-#define FMOD_SDL_VERSION 210928
+#define FMOD_SDL_VERSION 211000
 
 #ifdef __cplusplus
 extern "C" {
