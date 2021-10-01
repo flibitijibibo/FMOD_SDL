@@ -246,6 +246,15 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_Init(
 	FMOD_SDL_Device *device;
 	SDL_AudioSpec want, have;
 
+	/* Before we start: Replicate FMOD's PulseAudio stream name support:
+	 * https://www.fmod.org/questions/question/how-to-set-pulseaudio-program-name/
+	 */
+	if (extradriverdata != NULL)
+	{
+		const char *streamname = (char*) extradriverdata;
+		SDL_SetHint(SDL_HINT_AUDIO_DEVICE_APP_NAME, streamname);
+	}
+
 	/* What do we want? */
 	want.freq = *outputrate;
 	want.channels = *speakermodechannels;
