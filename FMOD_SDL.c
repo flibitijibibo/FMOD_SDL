@@ -33,7 +33,7 @@
 
 /* Public API */
 
-#define FMOD_SDL_VERSION 211000
+#define FMOD_SDL_VERSION 220616
 
 #ifdef __cplusplus
 extern "C" {
@@ -240,7 +240,12 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_Init(
 	int *speakermodechannels,
 	FMOD_SOUND_FORMAT *outputformat,
 	int dspbufferlength,
+#if FMOD_VERSION >= 0x00020203
+	int *dspnumbuffers,
+	int *dspnumadditionalbuffers,
+#else
 	int dspnumbuffers,
+#endif
 	void *extradriverdata
 ) {
 	FMOD_SDL_Device *device;
