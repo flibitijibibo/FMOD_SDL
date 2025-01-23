@@ -1,6 +1,6 @@
 /* FMOD_SDL: SDL Audio Output Plugin for FMOD Studio
  *
- * Copyright (c) 2018-2021 Ethan Lee
+ * Copyright (c) 2018-2025 Ethan Lee
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -24,7 +24,7 @@
  *
  */
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 #include "fmod.h"
 #include "fmod_output.h"
 #ifdef PRELOAD_MODE
@@ -33,7 +33,7 @@
 
 /* Public API */
 
-#define FMOD_SDL_VERSION 220616
+#define FMOD_SDL_VERSION 250123
 
 #ifdef __cplusplus
 extern "C" {
@@ -49,21 +49,31 @@ F_EXPORT void FMOD_SDL_Register(FMOD_SYSTEM *system);
 
 typedef struct FMOD_SDL_Device
 {
-	SDL_AudioDeviceID device;
+	SDL_AudioStream *device;
+	void *stagingBuffer;
+	size_t stagingLen;
 	Uint8 frameSize;
 } FMOD_SDL_Device;
 
-static void FMOD_SDL_MixCallback(void* userdata, Uint8 *stream,	int len)
-{
+static void FMOD_SDL_MixCallback(
+	void *userdata,
+	SDL_AudioStream *stream,
+	int additional_amount,
+	int total_amount
+) {
 	FMOD_OUTPUT_STATE *output_state = (FMOD_OUTPUT_STATE*) userdata;
 	FMOD_SDL_Device *dev = (FMOD_SDL_Device*)
 		output_state->plugindata;
 	if (output_state->readfrommixer(
 		output_state,
-		stream,
-		len / dev->frameSize
-	) != FMOD_OK) {
-		SDL_memset(stream, '\0', len);
+		dev->stagingBuffer,
+		dev->stagingLen / dev->frameSize
+	) == FMOD_OK) {
+		SDL_PutAudioStreamData(
+			stream,
+			dev->stagingBuffer,
+			dev->stagingLen
+		);
 	}
 }
 
@@ -71,7 +81,7 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_GetNumDrivers(
 	FMOD_OUTPUT_STATE *output_state,
 	int *numdrivers
 ) {
-	*numdrivers = SDL_GetNumAudioDevices(0);
+	SDL_free(SDL_GetAudioPlaybackDevices(numdrivers));
 	if (*numdrivers > 0)
 	{
 		*numdrivers += 1;
@@ -91,11 +101,14 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_GetDriverInfo(
 ) {
 	const char *envvar;
 	SDL_AudioSpec spec;
-	int devcount, i;
+	int devcount;
+	SDL_AudioDeviceID *devs;
+
+	devs = SDL_GetAudioPlaybackDevices(&devcount);
 
 	SDL_strlcpy(
 		name,
-		(id == 0) ? "SDL Default" : SDL_GetAudioDeviceName(id - 1, 0),
+		(id == 0) ? "SDL Default" : SDL_GetAudioDeviceName(devs[id - 1]),
 		namelen
 	);
 
@@ -124,81 +137,23 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_GetDriverInfo(
 
 	if (id == 0)
 	{
-		/* Okay, so go grab something from the liquor cabinet and get
-		 * ready, because this loop is a bit of a trip:
-		 *
-		 * We can't get the spec for the default device, because in
-		 * audio land a "default device" is a completely foreign idea,
-		 * some APIs support it but in reality you just have to pass
-		 * NULL as a driver string and the sound server figures out the
-		 * rest. In some psychotic universe the device can even be a
-		 * network address. No, seriously.
-		 *
-		 * So what do we do? Well, at least in my experience shipping
-		 * for the PC, the easiest thing to do is assume that the
-		 * highest spec in the list is what you should target, even if
-		 * it turns out that's not the default at the time you create
-		 * your device.
-		 *
-		 * Consider a laptop that has built-in stereo speakers, but is
-		 * connected to a home theater system with 5.1 audio. It may be
-		 * the case that the stereo audio is active, but the user may
-		 * at some point move audio to 5.1, at which point the server
-		 * will simply move the endpoint from underneath us and move our
-		 * output stream to the new device. At that point, you _really_
-		 * want to already be pushing out 5.1, because if not the user
-		 * will be stuck recreating the whole program, which on many
-		 * platforms is an instant cert failure. The tradeoff is that
-		 * you're potentially downmixing a 5.1 stream to stereo, which
-		 * is a bit wasteful, but presumably the hardware can handle it
-		 * if they were able to use a 5.1 system to begin with.
-		 *
-		 * So, we just aim for the highest channel count on the system.
-		 * We also do this with sample rate to a lesser degree; we try
-		 * to use a single device spec at a time, so it may be that
-		 * the sample rate you get isn't the highest from the list if
-		 * another device had a higher channel count.
-		 *
-		 * Lastly, if you set SDL_AUDIO_CHANNELS but not
-		 * SDL_AUDIO_FREQUENCY, we don't bother checking for a sample
-		 * rate, we fall through to the hardcoded value at the bottom of
-		 * this function.
-		 *
-		 * I'm so tired.
-		 *
-		 * -flibit
-		 */
-		if (*speakermodechannels <= 0)
+		if (!SDL_GetAudioDeviceFormat(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL))
 		{
-			const uint8_t setRate = (*systemrate <= 0);
-			devcount = SDL_GetNumAudioDevices(0);
-			for (i = 0; i < devcount; i += 1)
-			{
-				SDL_GetAudioDeviceSpec(i, 0, &spec);
-				if (	(spec.channels > *speakermodechannels) &&
-					(spec.channels <= 8)	)
-				{
-					*speakermodechannels = spec.channels;
-					if (setRate)
-					{
-						/* May be 0! That's okay! */
-						*systemrate = spec.freq;
-					}
-				}
-			}
+			SDL_zero(spec);
 		}
 	}
 	else
 	{
-		SDL_GetAudioDeviceSpec(id - 1, 0, &spec);
-		if ((spec.freq > 0) && (*systemrate <= 0))
-		{
-			*systemrate = spec.freq;
-		}
-		if ((spec.channels > 0) && (*speakermodechannels <= 0))
-		{
-			*speakermodechannels = spec.channels;
-		}
+		SDL_GetAudioDeviceFormat(devs[id - 1], &spec, NULL);
+	}
+	SDL_free(devs);
+	if ((spec.freq > 0) && (*systemrate <= 0))
+	{
+		*systemrate = spec.freq;
+	}
+	if ((spec.channels > 0) && (*speakermodechannels <= 0))
+	{
+		*speakermodechannels = spec.channels;
 	}
 
 	/* If we make it all the way here with no format, hardcode a sane one */
@@ -249,7 +204,9 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_Init(
 	void *extradriverdata
 ) {
 	FMOD_SDL_Device *device;
-	SDL_AudioSpec want, have;
+	SDL_AudioDeviceID devID;
+	SDL_AudioSpec spec;
+	const char *envvar;
 
 	/* Before we start: Replicate FMOD's PulseAudio stream name support:
 	 * https://www.fmod.org/questions/question/how-to-set-pulseaudio-program-name/
@@ -257,58 +214,83 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_Init(
 	if (extradriverdata != NULL)
 	{
 		const char *streamname = (char*) extradriverdata;
-		SDL_SetHint(SDL_HINT_AUDIO_DEVICE_APP_NAME, streamname);
+		SDL_SetHint(SDL_HINT_AUDIO_DEVICE_APP_ICON_NAME, streamname);
+	}
+
+	if (selecteddriver == 0)
+	{
+		devID = SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK;
+	}
+	else
+	{
+		int devcount;
+		SDL_AudioDeviceID *devs = SDL_GetAudioPlaybackDevices(&devcount);
+
+		/* Bounds checking is done before this function is called */
+		devID = devs[selecteddriver - 1];
+
+		SDL_free(devs);
+	}
+	if (!SDL_GetAudioDeviceFormat(devID, &spec, NULL))
+	{
+		SDL_zero(spec);
+
+		envvar = SDL_getenv("SDL_AUDIO_FREQUENCY");
+		if (envvar != NULL)
+		{
+			spec.freq = SDL_atoi(envvar);
+		}
+		envvar = SDL_getenv("SDL_AUDIO_CHANNELS");
+		if (envvar != NULL)
+		{
+			spec.channels = SDL_atoi(envvar);
+		}
 	}
 
 	/* What do we want? */
-	want.freq = *outputrate;
-	want.channels = *speakermodechannels;
+	if (*outputrate > 0)
+	{
+		spec.freq = *outputrate;
+	}
+	if (*speakermodechannels > 0)
+	{
+		spec.channels = *speakermodechannels;
+	}
 	switch (*outputformat)
 	{
 	#define FORMAT(fmod, sdl) \
-		case FMOD_SOUND_FORMAT_##fmod: want.format = AUDIO_##sdl; break;
+		case FMOD_SOUND_FORMAT_##fmod: spec.format = SDL_AUDIO_##sdl; break;
 	FORMAT(PCM8, S8)
-	FORMAT(PCM16, S16SYS)
-	FORMAT(PCM32, S32SYS)
-	FORMAT(PCMFLOAT, F32SYS)
+	FORMAT(PCM16, S16)
+	FORMAT(PCM32, S32)
+	FORMAT(PCMFLOAT, F32)
 	#undef FORMAT
 	default:
 		SDL_Log("Unsupported FMOD PCM format!");
 		return FMOD_ERR_OUTPUT_FORMAT;
 	}
-	want.silence = 0;
-	want.callback = FMOD_SDL_MixCallback;
-	want.samples = dspbufferlength;
-	want.userdata = output_state;
 
 	/* Create the device, finally. */
 	device = (FMOD_SDL_Device*) SDL_malloc(
 		sizeof(FMOD_SDL_Device)
 	);
-	device->device = SDL_OpenAudioDevice(
-		(selecteddriver == 0) ?
-			NULL :
-			SDL_GetAudioDeviceName(selecteddriver - 1, 0),
-		0,
-		&want,
-		&have,
-		(
-			SDL_AUDIO_ALLOW_FREQUENCY_CHANGE |
-			SDL_AUDIO_ALLOW_CHANNELS_CHANGE |
-			SDL_AUDIO_ALLOW_FORMAT_CHANGE
-		)
+	device->device = SDL_OpenAudioDeviceStream(
+		devID,
+		&spec,
+		FMOD_SDL_MixCallback,
+		output_state
 	);
-	if (device->device < 0)
+	if (device->device == NULL)
 	{
 		SDL_free(device);
-		SDL_Log("OpenAudioDevice failed: %s", SDL_GetError());
+		SDL_Log("SDL_OpenAudioDeviceStream failed: %s", SDL_GetError());
 		return FMOD_ERR_OUTPUT_INIT;
 	}
 
 	/* What did we get? */
-	*outputrate = have.freq;
-	*speakermodechannels = have.channels;
-	switch (have.channels)
+	*outputrate = spec.freq;
+	*speakermodechannels = spec.channels;
+	switch (spec.channels)
 	{
 	#define SPEAKERS(count, type) \
 		case count: *speakermode = FMOD_SPEAKERMODE_##type; break;
@@ -321,30 +303,39 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_Init(
 	SPEAKERS(12, 7POINT1POINT4)
 	#undef SPEAKERS
 	default:
-		SDL_CloseAudioDevice(device->device);
+		SDL_DestroyAudioStream(device->device);
 		SDL_free(device);
 		SDL_Log("Unrecognized speaker layout!");
 		return FMOD_ERR_OUTPUT_INIT;
 	}
-	switch (have.format)
+	switch (spec.format)
 	{
 	#define FORMAT(sdl, fmod, size) \
-		case AUDIO_##sdl: \
+		case SDL_AUDIO_##sdl: \
 			*outputformat = FMOD_SOUND_FORMAT_##fmod; \
 			device->frameSize = size; \
 			break;
 	FORMAT(S8, PCM8, 1)
-	FORMAT(S16SYS, PCM16, 2)
-	FORMAT(S32SYS, PCM32, 4)
-	FORMAT(F32SYS, PCMFLOAT, 4)
+	FORMAT(S16, PCM16, 2)
+	FORMAT(S32, PCM32, 4)
+	FORMAT(F32, PCMFLOAT, 4)
 	#undef FORMAT
 	default:
-		SDL_CloseAudioDevice(device->device);
+		SDL_DestroyAudioStream(device->device);
 		SDL_free(device);
 		SDL_Log("Unexpected SDL audio format!");
 		return FMOD_ERR_OUTPUT_INIT;
 	}
-	device->frameSize *= have.channels;
+	device->frameSize *= spec.channels;
+
+	device->stagingLen = dspbufferlength * device->frameSize;
+	device->stagingBuffer = SDL_malloc(device->stagingLen);
+	if (device->stagingBuffer == NULL)
+	{
+		SDL_DestroyAudioStream(device->device);
+		SDL_free(device);
+		return FMOD_ERR_OUTPUT_INIT;
+	}
 
 	/* We're ready to go! */
 	output_state->plugindata = device;
@@ -355,7 +346,7 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_Start(FMOD_OUTPUT_STATE *output_state)
 {
 	FMOD_SDL_Device *dev = (FMOD_SDL_Device*)
 		output_state->plugindata;
-	SDL_PauseAudioDevice(dev->device, 0);
+	SDL_ResumeAudioStreamDevice(dev->device);
 	return FMOD_OK;
 }
 
@@ -363,7 +354,7 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_Stop(FMOD_OUTPUT_STATE *output_state)
 {
 	FMOD_SDL_Device *dev = (FMOD_SDL_Device*)
 		output_state->plugindata;
-	SDL_PauseAudioDevice(dev->device, 1);
+	SDL_PauseAudioStreamDevice(dev->device);
 	return FMOD_OK;
 }
 
@@ -371,7 +362,8 @@ static FMOD_RESULT F_CALLBACK FMOD_SDL_Close(FMOD_OUTPUT_STATE *output_state)
 {
 	FMOD_SDL_Device *dev = (FMOD_SDL_Device*)
 		output_state->plugindata;
-	SDL_CloseAudioDevice(dev->device);
+	SDL_DestroyAudioStream(dev->device);
+	SDL_free(dev->stagingBuffer);
 	SDL_free(dev);
 	return FMOD_OK;
 }
@@ -412,7 +404,7 @@ static FMOD_OUTPUT_DESCRIPTION FMOD_SDL_Driver =
 F_EXPORT void FMOD_SDL_Register(FMOD_SYSTEM *system)
 {
 	unsigned int handle;
-	if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
+	if (!SDL_InitSubSystem(SDL_INIT_AUDIO))
 	{
 		SDL_Log("SDL_INIT_AUDIO failed: %s", SDL_GetError());
 		return;
