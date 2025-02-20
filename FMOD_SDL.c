@@ -33,7 +33,7 @@
 
 /* Public API */
 
-#define FMOD_SDL_VERSION 250123
+#define FMOD_SDL_VERSION 250220
 
 #ifdef __cplusplus
 extern "C" {
@@ -62,18 +62,25 @@ static void FMOD_SDL_MixCallback(
 	int total_amount
 ) {
 	FMOD_OUTPUT_STATE *output_state = (FMOD_OUTPUT_STATE*) userdata;
-	FMOD_SDL_Device *dev = (FMOD_SDL_Device*)
-		output_state->plugindata;
-	if (output_state->readfrommixer(
-		output_state,
-		dev->stagingBuffer,
-		dev->stagingLen / dev->frameSize
-	) == FMOD_OK) {
-		SDL_PutAudioStreamData(
-			stream,
+	FMOD_SDL_Device *dev = (FMOD_SDL_Device*) output_state->plugindata;
+	while (additional_amount > 0)
+	{
+		if (output_state->readfrommixer(
+			output_state,
 			dev->stagingBuffer,
-			dev->stagingLen
-		);
+			dev->stagingLen / dev->frameSize
+		) == FMOD_OK) {
+			SDL_PutAudioStreamData(
+				stream,
+				dev->stagingBuffer,
+				dev->stagingLen
+			);
+		}
+		else
+		{
+			SDL_Log("readfrommixer failed early");
+		}
+		additional_amount -= dev->stagingLen;
 	}
 }
 
