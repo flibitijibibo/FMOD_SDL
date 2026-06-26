@@ -1,6 +1,6 @@
 /* FMOD_SDL: SDL Audio Output Plugin for FMOD Studio
  *
- * Copyright (c) 2018-2025 Ethan Lee
+ * Copyright (c) 2018-2026 Ethan Lee
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -31,9 +31,14 @@
 #include "fmod_studio.h"
 #endif
 
+/* This got changed somewhere around 2.03 */
+#ifndef F_CALLBACK
+#define F_CALLBACK F_CALL
+#endif /* F_CALLBACK */
+
 /* Public API */
 
-#define FMOD_SDL_VERSION 250220
+#define FMOD_SDL_VERSION 260626
 
 #ifdef __cplusplus
 extern "C" {
